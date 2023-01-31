@@ -2,7 +2,6 @@
 """ Module for class BasicCache """
 
 from base_caching import BaseCaching
-
 class BasicCache(BaseCaching):
     """ inherits from BaseCaching and is a caching system """
 
