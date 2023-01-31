@@ -2,8 +2,12 @@
 """
 a python module to initiate a flask app using Babel
 """
+from datetime import timezone
 from flask import Flask, render_template, request, g
-from flask_babel import Babel
+from flask_babel import Babel, format_datetime
+from pytz import timezone
+import pytz.exceptions
+from datetime import datetime
 
 users = {
     1: {"name": "Balou", "locale": "fr", "timezone": "Europe/Paris"},
@@ -35,15 +39,45 @@ def get_locale():
     lcl = request.args.get('locale', None)
     if lcl and lcl in app.config['LANGUAGES']:
         return lcl
-    return request.accept_languages.best_match(app.config['LANGUAGES'])
+    if g.user:
+        lcl = g.user.get('locale')
+        if lcl in app.config['LANGUAGES']:
+            return lcl
+
+    lcl = request.headers.get('locale', None)
+    if lcl and lcl in app.config['LANGUAGES']:
+        return lcl
+    dflt = app.config['LANGUAGES']
+    return request.accept_languages.best_match(dflt)
+
+
+@babel.timezoneselector
+def get_timezone():
+    """
+    get_timezon - a babel time zone selector
+    """
+    tzone = request.args.get('timezone', None)
+    if tzone:
+        try:
+            return timezone(tzone).zone
+        except pytz.exceptions.UnknownTimeZoneError:
+            return 'UTC'
+    if g.user:
+        try:
+            tzone = g.user.get('timezone')
+            return timezone(tzone).zone
+        except pytz.exceptions.UnknownTimeZoneError:
+            return 'UTC'
+    dflt = app.config['BABEL_DEFAULT_TIMEZONE']
+    return request.accept_languages.best_match(dflt)
 
 
 @app.route('/', strict_slashes=False)
 def Welcome():
     """
-    Welcome - a route to a 5-index html
+    Welcome - a route to a index html
     """
-    return render_template('5-index.html')
+    return render_template('index.html')
 
 
 def get_user():
@@ -67,6 +101,7 @@ def before_request():
     """
     usr = get_user()
     g.user = usr
+    g.current_time = format_datetime(datetime.now())
 
 
 if __name__ == "__main__":
